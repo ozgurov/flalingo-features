@@ -1,0 +1,226 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2 class="text-center">Analiz Sonuçları</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h3>Ders Analizi</h3>
+                    <div class="analysis-container p-3 border rounded">
+                        {{ analysis | safe }}
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h3>Kişiselleştirilmiş Testler</h3>
+                    <p class="text-muted">Ders içeriğine göre oluşturulan kişiselleştirilmiş testleri çözün.</p>
+                    
+                    <div class="tests-wrapper">
+                        {{ tests_html | safe }}
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button id="check-all-btn" class="btn btn-primary">Tüm Cevapları Kontrol Et</button>
+                        <button id="reset-all-btn" class="btn btn-secondary ms-2">Testi Sıfırla</button>
+                    </div>
+                    
+                    <div id="test-results" class="mt-4 p-3 border rounded" style="display: none;">
+                        <h4>Test Sonuçları</h4>
+                        <p>Doğru Cevaplar: <span id="correct-count">0</span> / <span id="total-count">0</span></p>
+                        <div class="progress">
+                            <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="/" class="btn btn-outline-primary">Ana Sayfaya Dön</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkAllBtn = document.getElementById('check-all-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const testResults = document.getElementById('test-results');
+        const correctCount = document.getElementById('correct-count');
+        const totalCount = document.getElementById('total-count');
+        const progressBar = document.getElementById('progress-bar');
+        const checkButtons = document.querySelectorAll('.check-answer-btn');
+        
+        // Her bir "Cevabı Kontrol Et" düğmesine tıklama olayı ekle
+        checkButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const testItem = this.closest('.test-item');
+                checkAnswer(testItem);
+            });
+        });
+        
+        // "Tüm Cevapları Kontrol Et" düğmesine tıklama olayı ekle
+        checkAllBtn.addEventListener('click', function() {
+            const testItems = document.querySelectorAll('.test-item');
+            let correctAnswers = 0;
+            
+            testItems.forEach(testItem => {
+                if (checkAnswer(testItem)) {
+                    correctAnswers++;
+                }
+            });
+            
+            // Test sonuçlarını göster
+            const total = testItems.length;
+            correctCount.textContent = correctAnswers;
+            totalCount.textContent = total;
+            
+            const percentage = (correctAnswers / total) * 100;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = Math.round(percentage) + '%';
+            
+            // Yüzdeye göre renk değiştir
+            if (percentage < 50) {
+                progressBar.className = 'progress-bar bg-danger';
+            } else if (percentage < 80) {
+                progressBar.className = 'progress-bar bg-warning';
+            } else {
+                progressBar.className = 'progress-bar bg-success';
+            }
+            
+            testResults.style.display = 'block';
+        });
+        
+        // "Testi Sıfırla" düğmesine tıklama olayı ekle
+        resetAllBtn.addEventListener('click', function() {
+            const testItems = document.querySelectorAll('.test-item');
+            
+            testItems.forEach(testItem => {
+                // Seçili radyo düğmelerini temizle
+                const radioInputs = testItem.querySelectorAll('input[type="radio"]');
+                radioInputs.forEach(input => {
+                    input.checked = false;
+                });
+                
+                // Doğru/yanlış göstergelerini temizle
+                const options = testItem.querySelectorAll('.option');
+                options.forEach(option => {
+                    option.classList.remove('correct', 'incorrect');
+                });
+                
+                // Açıklamayı gizle
+                const explanation = testItem.querySelector('.explanation');
+                explanation.style.display = 'none';
+            });
+            
+            // Test sonuçlarını gizle
+            testResults.style.display = 'none';
+        });
+        
+        // Cevabı kontrol et ve doğru/yanlış olarak işaretle
+        function checkAnswer(testItem) {
+            const selectedInput = testItem.querySelector('input[type="radio"]:checked');
+            
+            if (!selectedInput) {
+                alert('Lütfen bir cevap seçin.');
+                return false;
+            }
+            
+            const correctAnswer = testItem.querySelector('.correct-answer').dataset.answer;
+            const selectedValue = selectedInput.value;
+            const explanation = testItem.querySelector('.explanation');
+            
+            // Tüm seçenekleri temizle
+            const options = testItem.querySelectorAll('.option');
+            options.forEach(option => {
+                option.classList.remove('correct', 'incorrect');
+            });
+            
+            // Seçilen seçeneği işaretle
+            const selectedOption = selectedInput.closest('.option');
+            
+            if (selectedValue === correctAnswer) {
+                selectedOption.classList.add('correct');
+                return true;
+            } else {
+                selectedOption.classList.add('incorrect');
+                
+                // Doğru cevabı göster
+                const correctOption = testItem.querySelector(`input[value="${correctAnswer}"]`).closest('.option');
+                correctOption.classList.add('correct');
+                return false;
+            }
+            
+            // Açıklamayı göster
+            explanation.style.display = 'block';
+        }
+    });
+</script>
+
+<style>
+    .tests-container {
+        margin-top: 20px;
+    }
+    
+    .test-item {
+        margin-bottom: 30px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    
+    .question {
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+    
+    .options {
+        margin-bottom: 15px;
+    }
+    
+    .option {
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    
+    .option:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .option.correct {
+        background-color: rgba(40, 167, 69, 0.2);
+        border: 1px solid #28a745;
+    }
+    
+    .option.incorrect {
+        background-color: rgba(220, 53, 69, 0.2);
+        border: 1px solid #dc3545;
+    }
+    
+    .explanation {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+    }
+    
+    .check-answer-btn {
+        margin-top: 10px;
+    }
+    
+    .analysis-container {
+        white-space: pre-wrap;
+        background-color: #f8f9fa;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %} 
